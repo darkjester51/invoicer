@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZCSInvoicer Pro — Invoice Generator (No Watermark)</title>
+  <meta name="description" content="ZCSInvoicer Pro: create and export professional invoices to PDF. 100% client-side. Save locally. No watermark." />
+  <style>
+    :root{--bg:#0b0f14;--panel:#121922;--muted:#c7d1db;--text:#eaf0f6;--brand:#7dd3fc;--accent:#a78bfa;--ok:#34d399;--warn:#fbbf24;--danger:#f87171;--line:#223042}
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b0f14 0%,#0e141c 100%);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    a{color:var(--brand);text-decoration:none} h1,h2,h3{margin:0 0 .4rem}
+    .wrap{max-width:1200px;margin:0 auto;padding:18px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .logo{display:flex;align-items:center;gap:10px}
+    .logo-badge{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--accent));display:grid;place-items:center;box-shadow:0 6px 24px rgba(125,211,252,.25)}
+    .logo-badge span{font-weight:800;color:#001018}
+    .tag{color:var(--muted);opacity:.9}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .card{background:rgba(18,25,34,.75);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+    .card>.hd{display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--line)}
+    .card>.bd{padding:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{display:block;margin:8px 0 6px;color:var(--muted);font-size:.9rem}
+    input,select,textarea{width:100%;background:#0f1621;border:1px solid #1e2a3a;color:var(--text);padding:10px;border-radius:10px;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:#34557a;box-shadow:0 0 0 3px rgba(125,211,252,.15)}
+    textarea{min-height:64px;resize:vertical}
+    .btns{display:flex;flex-wrap:wrap;gap:10px}
+    button{background:#132031;color:var(--text);border:1px solid #1f2c3d;padding:10px 12px;border-radius:12px;cursor:pointer}
+    button:hover{border-color:#32465f} .btn-primary{background:linear-gradient(135deg,#1f3b57,#1a2d43);border-color:#23405d}
+    .btn-accent{background:linear-gradient(135deg,#2a1e47,#1e1536);border-color:#35255a}
+    .btn-ok{background:linear-gradient(135deg,#0f3a2d,#0d2e25);border-color:#125c48}
+    .btn-warn{background:linear-gradient(135deg,#3a2d0f,#2d240d)}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border-bottom:1px dashed #243245;padding:10px;text-align:left}
+    th{color:var(--muted);font-weight:600}
+    td input{width:100%;background:transparent;border:none;color:var(--text)} td input:focus{outline:none}
+    .right{text-align:right}
+    .totals{margin-top:12px;display:grid;gap:6px}
+    .totals .line{display:flex;justify-content:space-between}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.35);color:#b8ebff;font-size:.85rem}
+
+    /* Preview (PDF capture target) */
+    .invoice{background:#fff;color:#111;border-radius:12px;padding:28px;position:relative;overflow:hidden}
+    .invoice h2{margin:0 0 6px} .muted{color:#666}
+    .hr{height:1px;background:#e9eef5;margin:16px 0}
+    .iv-grid{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
+    .iv-items table{width:100%;border-collapse:collapse}
+    .iv-items th,.iv-items td{border-bottom:1px solid #eceff4;padding:10px;text-align:left;font-size:.95rem}
+    .iv-items th{background:#f7f9fc}
+    .iv-totals{margin-top:10px;display:grid;gap:6px} .iv-totals .line{display:flex;justify-content:space-between}
+    .stamp{font-weight:800;font-size:1.1rem;color:#0a7a5b}
+    .logo-preview{max-height:64px;object-fit:contain}
+
+    footer{margin-top:18px;color:#9ab;opacity:.9} .small{font-size:.85rem}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}}
+
+    /* tiny toast */
+    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#0f1621;border:1px solid #1e2a3a;color:#eaf0f6;padding:10px 12px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s}
+    .toast.show{opacity:1}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <div class="logo-badge"><span>Z</span></div>
+        <div>
+          <h1>ZCSInvoicer <span style="opacity:.75;font-size:.9em;font-weight:500;">Pro</span></h1>
+          <div class="tag">No watermark • 100% client-side • GitHub Pages-ready</div>
+        </div>
+      </div>
+      <div class="btns">
+        <button id="btnExport" class="btn-ok">Export PDF</button>
+        <button id="btnSave" class="btn-primary">Save</button>
+        <button id="btnLoad" class="btn-accent">Load</button>
+        <button id="btnReset" class="btn-warn">Reset</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Form Card -->
+      <section class="card" aria-labelledby="formTitle">
+        <div class="hd"><h2 id="formTitle">Invoice Details</h2><span class="badge" id="statusBadge">Unsaved</span></div>
+        <div class="bd">
+          <div class="row">
+            <div>
+              <label>Your business</label>
+              <input id="bizName" placeholder="Company Name" />
+              <textarea id="bizAddr" placeholder="Address"></textarea>
+              <div class="row"><input id="bizEmail" placeholder="Email" /><input id="bizPhone" placeholder="Phone" /></div>
+              <label class="small">Logo (optional)</label>
+              <input type="file" id="logoFile" accept="image/*" />
+            </div>
+            <div>
+              <label>Client</label>
+              <input id="clientName" placeholder="Client / Company" />
+              <textarea id="clientAddr" placeholder="Client Address"></textarea>
+              <div class="row"><input id="clientEmail" placeholder="Client Email" /><input id="clientPhone" placeholder="Client Phone" /></div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div><label>Invoice #</label><input id="invNumber" /></div>
+            <div class="row">
+              <div><label>Invoice Date</label><input id="invDate" type="date" /></div>
+              <div><label>Due Date</label><input id="dueDate" type="date" /></div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div>
+              <label>Currency</label>
+              <select id="currency">
+                <option value="USD">USD ($)</option><option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option><option value="JPY">JPY (¥)</option>
+                <option value="AUD">AUD ($)</option>
+              </select>
+            </div>
+            <div class="row">
+              <div><label>Tax %</label><input id="taxRate" type="number" step="0.01" value="0" /></div>
+              <div><label>Discount %</label><input id="discountRate" type="number" step="0.01" value="0" /></div>
+            </div>
+          </div>
+
+          <div style="margin-top:10px">
+            <label>Line Items</label>
+            <table aria-label="Line items table"><thead>
+              <tr><th style="width:45%">Description</th><th style="width:15%">Qty</th><th style="width:20%">Unit Price</th><th style="width:20%" class="right">Amount</th></tr>
+            </thead><tbody id="itemsBody"></tbody></table>
+            <div class="btns" style="margin-top:8px"><button id="btnAddItem" class="btn-primary">+ Add Item</button><button id="btnClearItems">Clear Items</button></div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div><label>Notes</label><textarea id="notes" placeholder="Thank you for your business!"></textarea></div>
+            <div><label>Terms</label><textarea id="terms" placeholder="Payment due within 14 days."></textarea></div>
+          </div>
+
+          <div class="totals">
+            <div class="line"><span>Subtotal</span><strong id="tSubtotal">$0.00</strong></div>
+            <div class="line"><span>Discount</span><strong id="tDiscount">-$0.00</strong></div>
+            <div class="line"><span>Tax</span><strong id="tTax">$0.00</strong></div>
+            <div class="line"><span>Total</span><strong id="tTotal">$0.00</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Preview Card -->
+      <section class="card" aria-labelledby="previewTitle">
+        <div class="hd"><h2 id="previewTitle">Live Preview</h2><span class="badge">PDF looks like this</span></div>
+        <div class="bd">
+          <div id="invoicePreview" class="invoice" aria-label="Invoice preview">
+            <div class="iv-grid">
+              <div>
+                <h2 id="pvBizName">Your Company</h2>
+                <div class="muted" id="pvBizAddr">Address line…</div>
+                <div class="muted"><span id="pvBizEmail">email@company.com</span> • <span id="pvBizPhone">(000) 000-0000</span></div>
+              </div>
+              <div style="text-align:right">
+                <img id="pvLogo" class="logo-preview" alt="Logo" />
+                <div class="muted">Invoice <strong id="pvInvNumber">#0001</strong></div>
+                <div class="muted">Date: <span id="pvInvDate">—</span></div>
+                <div class="muted">Due: <span id="pvDueDate">—</span></div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+            <div class="iv-grid">
+              <div>
+                <div class="muted">Bill To</div>
+                <div id="pvClientName" style="font-weight:600">Client Name</div>
+                <div class="muted" id="pvClientAddr">Client address…</div>
+                <div class="muted"><span id="pvClientEmail">client@email.com</span> • <span id="pvClientPhone">(000) 000-0000</span></div>
+              </div>
+              <div style="text-align:right"><span class="stamp" id="pvTotalBig">$0.00</span></div>
+            </div>
+
+            <div class="iv-items" style="margin-top:12px">
+              <table><thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Unit</th><th class="right">Amount</th></tr></thead>
+              <tbody id="pvItems"></tbody></table>
+            </div>
+
+            <div class="iv-totals">
+              <div class="line"><span>Subtotal</span><strong id="pvSubtotal">$0.00</strong></div>
+              <div class="line"><span>Discount</span><strong id="pvDiscount">-$0.00</strong></div>
+              <div class="line"><span>Tax</span><strong id="pvTax">$0.00</strong></div>
+              <div class="line"><span>Total</span><strong id="pvTotal">$0.00</strong></div>
+            </div>
+
+            <div class="hr"></div>
+            <div><strong>Notes</strong><div id="pvNotes" class="muted">Thank you for your business!</div></div>
+            <div style="height:6px"></div>
+            <div><strong>Terms</strong><div id="pvTerms" class="muted">Payment due within 14 days.</div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="wrap" style="padding-left:0;padding-right:0">
+      <div class="small">ZCSInvoicer Pro — watermark-free exports. Everything saves locally.</div>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // ===== Config =====
+    // PRO build: watermark OFF.
+    let WATERMARK = false;
+
+    // ===== Helpers =====
+    const $ = s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+    const toast = (msg)=>{ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); };
+    const currencySymbols = { USD:'$', EUR:'€', GBP:'£', JPY:'¥', AUD:'$' };
+    const fmtMoney=(v,cur)=> (currencySymbols[cur]||'$') + (Number.isFinite(+v)?(+v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'0.00');
+    const readNumber = el => { const n=parseFloat(el.value); return Number.isFinite(n)? n : 0; };
+    const uid = ()=>'inv-'+Math.random().toString(36).slice(2,8);
+    const today = ()=> new Date().toISOString().slice(0,10);
+    const esc = s => (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+    // ===== State & Elements =====
+    const state={ id:uid(), logoDataUrl:'' };
+    const els = {
+      bizName:$('#bizName'), bizAddr:$('#bizAddr'), bizEmail:$('#bizEmail'), bizPhone:$('#bizPhone'), logoFile:$('#logoFile'),
+      clientName:$('#clientName'), clientAddr:$('#clientAddr'), clientEmail:$('#clientEmail'), clientPhone:$('#clientPhone'),
+      invNumber:$('#invNumber'), invDate:$('#invDate'), dueDate:$('#dueDate'),
+      currency:$('#currency'), taxRate:$('#taxRate'), discountRate:$('#discountRate'),
+      itemsBody:$('#itemsBody'), btnAddItem:$('#btnAddItem'), btnClearItems:$('#btnClearItems'),
+      notes:$('#notes'), terms:$('#terms'),
+      tSubtotal:$('#tSubtotal'), tDiscount:$('#tDiscount'), tTax:$('#tTax'), tTotal:$('#tTotal'),
+      pv:{ bizName:$('#pvBizName'), bizAddr:$('#pvBizAddr'), bizEmail:$('#pvBizEmail'), bizPhone:$('#pvBizPhone'), pvLogo:$('#pvLogo'),
+           clientName:$('#pvClientName'), clientAddr:$('#pvClientAddr'), clientEmail:$('#pvClientEmail'), clientPhone:$('#pvClientPhone'),
+           invNumber:$('#pvInvNumber'), invDate:$('#pvInvDate'), dueDate:$('#pvDueDate'),
+           items:$('#pvItems'), subtotal:$('#pvSubtotal'), discount:$('#pvDiscount'), tax:$('#pvTax'), total:$('#pvTotal'), totalBig:$('#pvTotalBig'),
+           notes:$('#pvNotes'), terms:$('#pvTerms') },
+      btnExport:$('#btnExport'), btnSave:$('#btnSave'), btnLoad:$('#btnLoad'), btnReset:$('#btnReset'),
+      statusBadge:$('#statusBadge')
+    };
+
+    // ===== Items =====
+    function addItemRow(item={desc:'',qty:1,price:0}){
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td><input aria-label="Description" value="${(item.desc||'').replace(/"/g,'&quot;')}"></td>
+        <td class="right"><input aria-label="Quantity" type="number" min="0" step="1" value="${item.qty??1}"></td>
+        <td class="right"><input aria-label="Unit price" type="number" min="0" step="0.01" value="${item.price??0}"></td>
+        <td class="right"><span class="amount">$0.00</span> <button title="Remove" class="rm" style="margin-left:6px;color:#f87171;background:transparent;border:none;cursor:pointer">✕</button></td>`;
+      els.itemsBody.appendChild(tr);
+      tr.querySelectorAll('input').forEach(i=> i.addEventListener('input', scheduleRender));
+      tr.querySelector('.rm').addEventListener('click', ()=>{ tr.remove(); scheduleRender(); });
+      scheduleRender();
+    }
+    function clearItems(){ els.itemsBody.innerHTML=''; scheduleRender(); }
+
+    // ===== Collect & Render =====
+    let renderTimer=null;
+    function scheduleRender(){ els.statusBadge.textContent='Unsaved'; clearTimeout(renderTimer); renderTimer=setTimeout(render,60); }
+    function collect(){
+      const items=[...els.itemsBody.querySelectorAll('tr')].map(tr=>{
+        const [d,q,p]=tr.querySelectorAll('input'); return {desc:d.value.trim(), qty:parseFloat(q.value)||0, price:parseFloat(p.value)||0};
+      });
+      return {
+        id:state.id,
+        biz:{name:els.bizName.value.trim(), addr:els.bizAddr.value.trim(), email:els.bizEmail.value.trim(), phone:els.bizPhone.value.trim(), logoDataUrl:state.logoDataUrl||''},
+        client:{name:els.clientName.value.trim(), addr:els.clientAddr.value.trim(), email:els.clientEmail.value.trim(), phone:els.clientPhone.value.trim()},
+        inv:{number:els.invNumber.value.trim(), date:els.invDate.value, due:els.dueDate.value},
+        currency:els.currency.value,
+        taxRate:readNumber(els.taxRate), discountRate:readNumber(els.discountRate),
+        items, notes:els.notes.value.trim(), terms:els.terms.value.trim()
+      };
+    }
+    function render(){
+      const d=collect(), cur=d.currency;
+      const subtotal=d.items.reduce((s,it)=>s+(it.qty*it.price),0);
+      const discount=subtotal*(d.discountRate/100);
+      const taxedBase=Math.max(0, subtotal-discount);
+      const tax=taxedBase*(d.taxRate/100);
+      const total=taxedBase+tax;
+
+      els.tSubtotal.textContent=fmtMoney(subtotal,cur);
+      els.tDiscount.textContent='-'+fmtMoney(discount,cur);
+      els.tTax.textContent=fmtMoney(tax,cur);
+      els.tTotal.textContent=fmtMoney(total,cur);
+
+      els.pv.bizName.textContent=d.biz.name||'Your Company';
+      els.pv.bizAddr.textContent=d.biz.addr||'—';
+      els.pv.bizEmail.textContent=d.biz.email||'—';
+      els.pv.pvLogo?.setAttribute?.('src','');
+
+      els.pv.bizPhone.textContent=d.biz.phone||'—';
+      els.pv.invNumber.textContent=d.inv.number||'#0001';
+      els.pv.invDate.textContent=d.inv.date||'—';
+      els.pv.dueDate.textContent=d.inv.due||'—';
+
+      els.pv.clientName.textContent=d.client.name||'Client Name';
+      els.pv.clientAddr.textContent=d.client.addr||'—';
+      els.pv.clientEmail.textContent=d.client.email||'—';
+      els.pv.clientPhone.textContent=d.client.phone||'—';
+
+      els.pv.items.innerHTML='';
+      d.items.forEach(it=>{
+        const tr=document.createElement('tr');
+        const amount=it.qty*it.price;
+        tr.innerHTML=`<td>${esc(it.desc)||'—'}</td><td class="right">${it.qty||0}</td><td class="right">${fmtMoney(it.price,cur)}</td><td class="right">${fmtMoney(amount,cur)}</td>`;
+        els.pv.items.appendChild(tr);
+      });
+
+      els.pv.subtotal.textContent=fmtMoney(subtotal,cur);
+      els.pv.discount.textContent='-'+fmtMoney(discount,cur);
+      els.pv.tax.textContent=fmtMoney(tax,cur);
+      els.pv.total.textContent=fmtMoney(total,cur);
+      els.pv.totalBig.textContent=fmtMoney(total,cur);
+
+      // Editor row amounts
+      $$('#itemsBody tr').forEach(tr=>{
+        const [_,q,p]=tr.querySelectorAll('input');
+        const amt=(parseFloat(q.value)||0)*(parseFloat(p.value)||0);
+        tr.querySelector('.amount').textContent=fmtMoney(amt,cur);
+      });
+
+      // Logo
+      if(state.logoDataUrl){ els.pv.pvLogo.src=state.logoDataUrl; els.pv.pvLogo.style.display='inline-block'; }
+      else{ els.pv.pvLogo.removeAttribute('src'); els.pv.pvLogo.style.display='none'; }
+    }
+
+    // ===== Storage =====
+    const STORAGE_KEY='zcsinvoicer.v1', STORAGE_LIST='zcsinvoicer.list.v1';
+    function save(){
+      try{
+        const data=collect();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        const key=data.inv.number||state.id;
+        const list=JSON.parse(localStorage.getItem(STORAGE_LIST)||'{}');
+        list[key]=data; localStorage.setItem(STORAGE_LIST, JSON.stringify(list));
+        els.statusBadge.textContent='Saved'; toast('Saved locally');
+      }catch(e){ console.error(e); alert('Save failed. Check console.'); }
+    }
+    function load(){
+      try{
+        const list=JSON.parse(localStorage.getItem(STORAGE_LIST)||'{}');
+        const keys=Object.keys(list);
+        if(!keys.length){ alert('No saved invoices yet.'); return; }
+        const pick=prompt('Load which invoice?\n\n'+keys.join('\n'));
+        if(!pick || !list[pick]) return;
+        apply(list[pick]); els.statusBadge.textContent='Loaded'; toast('Loaded');
+      }catch(e){ console.error(e); alert('Load failed.'); }
+    }
+    function apply(d){
+      state.id=d.id||uid(); state.logoDataUrl=d.biz?.logoDataUrl||'';
+      els.bizName.value=d.biz?.name||''; els.bizAddr.value=d.biz?.addr||'';
+      els.bizEmail.value=d.biz?.email||''; els.bizPhone.value=d.biz?.phone||'';
+      els.clientName.value=d.client?.name||''; els.clientAddr.value=d.client?.addr||'';
+      els.clientEmail.value=d.client?.email||''; els.clientPhone.value=d.client?.phone||'';
+      els.invNumber.value=d.inv?.number||''; els.invDate.value=d.inv?.date||today(); els.dueDate.value=d.inv?.due||'';
+      els.currency.value=d.currency||'USD'; els.taxRate.value=(d.taxRate??0); els.discountRate.value=(d.discountRate??0);
+      clearItems(); (d.items||[]).forEach(addItemRow);
+      els.notes.value=d.notes||''; els.terms.value=d.terms||''; render();
+    }
+    function resetAll(){
+      if(!confirm('Clear all fields?')) return;
+      state.id=uid(); state.logoDataUrl='';
+      els.bizName.value=els.bizAddr.value=els.bizEmail.value=els.bizPhone.value='';
+      els.clientName.value=els.clientAddr.value=els.clientEmail.value=els.clientPhone.value='';
+      els.invNumber.value=nextInvoiceNumber(); els.invDate.value=today(); els.dueDate.value='';
+      els.currency.value='USD'; els.taxRate.value=0; els.discountRate.value=0;
+      els.notes.value='Thank you for your business!'; els.terms.value='Payment due within 14 days.';
+      clearItems(); addItemRow(); els.statusBadge.textContent='Unsaved'; render();
+    }
+    function nextInvoiceNumber(){
+      const dt=new Date(), y=String(dt.getFullYear()).slice(-2), m=String(dt.getMonth()+1).padStart(2,'0'), d=String(dt.getDate()).padStart(2,'0');
+      const rand=Math.floor(Math.random()*90+10); return `INV-${y}${m}${d}-${rand}`;
+    }
+
+    // ===== Robust PDF Export (loads html2pdf on demand) =====
+    async function ensurePdfLib(){
+      if(window.html2pdf) return true;
+      const urls=[
+        "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js",
+        "https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+      ];
+      for(const u of urls){
+        try{
+          await new Promise((res,rej)=>{
+            const s=document.createElement('script'); s.src=u; s.async=true;
+            s.onload=()=>res(); s.onerror=()=>rej(new Error('load fail '+u));
+            document.head.appendChild(s);
+          });
+          if(window.html2pdf) return true;
+        }catch(e){ console.warn(e); }
+      }
+      return false;
+    }
+
+    // No watermark in Pro
+    function addObtrusiveWatermark(){ return null; }
+
+    async function exportPDF(){
+      try{
+        const ok=await ensurePdfLib();
+        if(!ok){ alert('Could not load PDF exporter. Please check your connection and try again.'); return; }
+
+        const d=collect(), fileName=(d.inv.number||'invoice')+'.pdf';
+        const el=$("#invoicePreview");
+
+        await html2pdf().set({
+          margin:10, filename:fileName,
+          image:{type:'jpeg',quality:0.98},
+          html2canvas:{scale:2, useCORS:true},
+          jsPDF:{unit:'mm', format:'a4', orientation:'portrait'}
+        }).from(el).save();
+
+      }catch(err){
+        console.error(err);
+        alert('PDF export failed. See console for details.');
+      }
+    }
+
+    // ===== Events =====
+    els.btnAddItem.addEventListener('click', ()=>addItemRow());
+    els.btnClearItems.addEventListener('click', clearItems);
+    [els.bizName,els.bizAddr,els.bizEmail,els.bizPhone,els.clientName,els.clientAddr,els.clientEmail,els.clientPhone,
+     els.invNumber,els.invDate,els.dueDate,els.currency,els.taxRate,els.discountRate,els.notes,els.terms]
+     .forEach(el=> el.addEventListener('input', scheduleRender));
+
+    els.logoFile.addEventListener('change', e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      const r=new FileReader(); r.onload=()=>{ state.logoDataUrl=r.result; scheduleRender(); }; r.readAsDataURL(f);
+    });
+
+    els.btnExport.addEventListener('click', exportPDF);
+    els.btnSave.addEventListener('click', save);
+    els.btnLoad.addEventListener('click', load);
+    els.btnReset.addEventListener('click', resetAll);
+
+    els.itemsBody.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addItemRow(); }});
+
+    // ===== Init =====
+    (function init(){ els.invNumber.value=nextInvoiceNumber(); els.invDate.value=today(); addItemRow(); render(); })();
+  </script>
+</body>
+</html>

@@ -4,12 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ZCSInvoicer — Simple Client-Side Invoice Generator</title>
-  <meta name="description" content="ZCSInvoicer lets you create and export professional invoices to PDF. 100% client-side. Save locally." />
+  <meta name="description" content="Create professional invoices and export to PDF. Free version adds a watermark. 100% client-side, GitHub Pages ready." />
+  <meta property="og:title" content="ZCSInvoicer — Free Invoice Generator" />
+  <meta property="og:description" content="Create invoices in your browser and export to PDF. Upgrade to remove watermark." />
+  <meta property="og:type" content="website" />
   <style>
     :root{--bg:#0b0f14;--panel:#121922;--muted:#c7d1db;--text:#eaf0f6;--brand:#7dd3fc;--accent:#a78bfa;--ok:#34d399;--warn:#fbbf24;--danger:#f87171;--line:#223042}
     *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;background:linear-gradient(180deg,#0b0f14 0%,#0e141c 100%);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    a{color:var(--brand);text-decoration:none} h1,h2,h3{margin:0 0 .4rem}
+    a{color:var(--brand);text-decoration:none}
+    h1,h2,h3{margin:0 0 .4rem}
     .wrap{max-width:1200px;margin:0 auto;padding:18px}
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
     .logo{display:flex;align-items:center;gap:10px}
@@ -27,14 +31,16 @@
     textarea{min-height:64px;resize:vertical}
     .btns{display:flex;flex-wrap:wrap;gap:10px}
     button{background:#132031;color:var(--text);border:1px solid #1f2c3d;padding:10px 12px;border-radius:12px;cursor:pointer}
-    button:hover{border-color:#32465f} .btn-primary{background:linear-gradient(135deg,#1f3b57,#1a2d43);border-color:#23405d}
-    .btn-accent{background:linear-gradient(135deg,#2a1e47,#1e1536);border-color:#35255a}
+    button:hover{border-color:#32465f}
+    .btn-primary{background:linear-gradient(135deg,#1f3b57,#1a2d43);border-color:#23405d}
+    .btn-accent{background:#4f46e5;border:0}
     .btn-ok{background:linear-gradient(135deg,#0f3a2d,#0d2e25);border-color:#125c48}
     .btn-warn{background:linear-gradient(135deg,#3a2d0f,#2d240d)}
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{border-bottom:1px dashed #243245;padding:10px;text-align:left}
     th{color:var(--muted);font-weight:600}
-    td input{width:100%;background:transparent;border:none;color:var(--text)} td input:focus{outline:none}
+    td input{width:100%;background:transparent;border:none;color:var(--text)}
+    td input:focus{outline:none}
     .right{text-align:right}
     .totals{margin-top:12px;display:grid;gap:6px}
     .totals .line{display:flex;justify-content:space-between}
@@ -42,30 +48,33 @@
 
     /* Preview (PDF capture target) */
     .invoice{background:#fff;color:#111;border-radius:12px;padding:28px;position:relative;overflow:hidden}
-    .invoice h2{margin:0 0 6px} .muted{color:#666}
+    .invoice h2{margin:0 0 6px}
+    .muted{color:#666}
     .hr{height:1px;background:#e9eef5;margin:16px 0}
     .iv-grid{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
     .iv-items table{width:100%;border-collapse:collapse}
     .iv-items th,.iv-items td{border-bottom:1px solid #eceff4;padding:10px;text-align:left;font-size:.95rem}
     .iv-items th{background:#f7f9fc}
-    .iv-totals{margin-top:10px;display:grid;gap:6px} .iv-totals .line{display:flex;justify-content:space-between}
+    .iv-totals{margin-top:10px;display:grid;gap:6px}
+    .iv-totals .line{display:flex;justify-content:space-between}
     .stamp{font-weight:800;font-size:1.1rem;color:#0a7a5b}
     .logo-preview{max-height:64px;object-fit:contain}
 
-    /* Tiled diagonal background watermark (PDF-only; injected/removed at export) */
+    /* Tiled diagonal watermark (injected only for PDF capture) */
     .wm-tiling{
       position:absolute; inset:0; pointer-events:none;
       background-repeat:repeat;
-      background-size:600px 400px;   /* tile size */
-      opacity:1;                     /* transparency is inside the SVG fill */
-      z-index:0;                     /* sits under content but on paper */
+      background-size:600px 400px;
+      opacity:1;
+      z-index:0;
       mix-blend-mode:multiply;
     }
 
-    footer{margin-top:18px;color:#9ab;opacity:.9} .small{font-size:.85rem}
+    footer{margin-top:18px;color:#9ab;opacity:.9}
+    .small{font-size:.85rem}
     @media (max-width:980px){.grid{grid-template-columns:1fr}}
 
-    /* tiny toast */
+    /* toast */
     .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#0f1621;border:1px solid #1e2a3a;color:#eaf0f6;padding:10px 12px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s}
     .toast.show{opacity:1}
   </style>
@@ -83,13 +92,14 @@
       <div class="btns">
         <button id="btnExport" class="btn-ok">Export PDF</button>
         <button id="btnSave" class="btn-primary">Save</button>
-        <button id="btnLoad" class="btn-accent">Load</button>
+        <button id="btnLoad" class="btn-primary">Load</button>
         <button id="btnReset" class="btn-warn">Reset</button>
+        <button id="btnUpgrade" class="btn-accent">🚀 Upgrade — Remove Watermark</button>
       </div>
     </header>
 
     <div class="grid">
-      <!-- Form Card -->
+      <!-- Form -->
       <section class="card" aria-labelledby="formTitle">
         <div class="hd"><h2 id="formTitle">Invoice Details</h2><span class="badge" id="statusBadge">Unsaved</span></div>
         <div class="bd">
@@ -155,7 +165,7 @@
         </div>
       </section>
 
-      <!-- Preview Card -->
+      <!-- Live Preview -->
       <section class="card" aria-labelledby="previewTitle">
         <div class="hd"><h2 id="previewTitle">Live Preview</h2><span class="badge">PDF looks like this</span></div>
         <div class="bd">
@@ -207,16 +217,19 @@
     </div>
 
     <footer class="wrap" style="padding-left:0;padding-right:0">
-      <div class="small">Pro tip: Host ZCSInvoicer on GitHub Pages. Everything saves locally — no backend required.</div>
+      <div class="small">Using the free version of ZCSInvoicer. <a id="footerUpgrade" href="#">Upgrade</a> to remove watermark.</div>
+      <div class="small">© ZetaCron Solutions • <a href="./terms.html">Terms</a> • <a href="./privacy.html">Privacy</a></div>
     </footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script>
-    // ===== Config =====
-    // FREE build: watermark ON, no toggle.
+    // ===== Config (FREE) =====
     let WATERMARK = true;
+
+    // ===== Stripe Payment Link (replace with your live link) =====
+    const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/REPLACE_ME";
 
     // ===== Helpers =====
     const $ = s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
@@ -228,7 +241,6 @@
     const today = ()=> new Date().toISOString().slice(0,10);
     const esc = s => (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-    // ===== State & Elements =====
     const state={ id:uid(), logoDataUrl:'' };
     const els = {
       bizName:$('#bizName'), bizAddr:$('#bizAddr'), bizEmail:$('#bizEmail'), bizPhone:$('#bizPhone'), logoFile:$('#logoFile'),
@@ -244,8 +256,13 @@
            items:$('#pvItems'), subtotal:$('#pvSubtotal'), discount:$('#pvDiscount'), tax:$('#pvTax'), total:$('#pvTotal'), totalBig:$('#pvTotalBig'),
            notes:$('#pvNotes'), terms:$('#pvTerms') },
       btnExport:$('#btnExport'), btnSave:$('#btnSave'), btnLoad:$('#btnLoad'), btnReset:$('#btnReset'),
-      statusBadge:$('#statusBadge')
+      statusBadge:$('#statusBadge'), btnUpgrade:$('#btnUpgrade'), footerUpgrade:$('#footerUpgrade')
     };
+
+    // Tie both upgrade links to Stripe
+    [els.btnUpgrade, els.footerUpgrade].forEach(el=>{
+      if(el){ el.addEventListener('click', (e)=>{ e.preventDefault(); window.location.href = STRIPE_PAYMENT_LINK; }); }
+    });
 
     // ===== Items =====
     function addItemRow(item={desc:'',qty:1,price:0}){
@@ -254,7 +271,9 @@
         <td><input aria-label="Description" value="${(item.desc||'').replace(/"/g,'&quot;')}"></td>
         <td class="right"><input aria-label="Quantity" type="number" min="0" step="1" value="${item.qty??1}"></td>
         <td class="right"><input aria-label="Unit price" type="number" min="0" step="0.01" value="${item.price??0}"></td>
-        <td class="right"><span class="amount">$0.00</span> <button title="Remove" class="rm" style="margin-left:6px;color:#f87171;background:transparent;border:none;cursor:pointer">✕</button></td>`;
+        <td class="right"><span class="amount">$0.00</span>
+          <button title="Remove" class="rm" style="margin-left:6px;color:#f87171;background:transparent;border:none;cursor:pointer">✕</button>
+        </td>`;
       els.itemsBody.appendChild(tr);
       tr.querySelectorAll('input').forEach(i=> i.addEventListener('input', scheduleRender));
       tr.querySelector('.rm').addEventListener('click', ()=>{ tr.remove(); scheduleRender(); });
@@ -275,7 +294,7 @@
         client:{name:els.clientName.value.trim(), addr:els.clientAddr.value.trim(), email:els.clientEmail.value.trim(), phone:els.clientPhone.value.trim()},
         inv:{number:els.invNumber.value.trim(), date:els.invDate.value, due:els.dueDate.value},
         currency:els.currency.value,
-        taxRate:readNumber(els.taxRate), discountRate:readNumber(els.discountRate),
+        taxRate:parseFloat(els.taxRate.value)||0, discountRate:parseFloat(els.discountRate.value)||0,
         items, notes:els.notes.value.trim(), terms:els.terms.value.trim()
       };
     }
@@ -319,14 +338,14 @@
       els.pv.total.textContent=fmtMoney(total,cur);
       els.pv.totalBig.textContent=fmtMoney(total,cur);
 
-      // Editor row amounts
+      // Editor amounts
       $$('#itemsBody tr').forEach(tr=>{
         const [_,q,p]=tr.querySelectorAll('input');
         const amt=(parseFloat(q.value)||0)*(parseFloat(p.value)||0);
         tr.querySelector('.amount').textContent=fmtMoney(amt,cur);
       });
 
-      // Logo
+      // Logo preview
       if(state.logoDataUrl){ els.pv.pvLogo.src=state.logoDataUrl; els.pv.pvLogo.style.display='inline-block'; }
       else{ els.pv.pvLogo.removeAttribute('src'); els.pv.pvLogo.style.display='none'; }
     }
@@ -341,7 +360,7 @@
         const list=JSON.parse(localStorage.getItem(STORAGE_LIST)||'{}');
         list[key]=data; localStorage.setItem(STORAGE_LIST, JSON.stringify(list));
         els.statusBadge.textContent='Saved'; toast('Saved locally');
-      }catch(e){ console.error(e); alert('Save failed. Check console.'); }
+      }catch(e){ console.error(e); alert('Save failed.'); }
     }
     function load(){
       try{
@@ -379,7 +398,7 @@
       const rand=Math.floor(Math.random()*90+10); return `INV-${y}${m}${d}-${rand}`;
     }
 
-    // ===== Robust PDF Export (loads html2pdf on demand) =====
+    // ===== PDF (on-demand loader) =====
     async function ensurePdfLib(){
       if(window.html2pdf) return true;
       const urls=[
@@ -400,13 +419,13 @@
       return false;
     }
 
-    // Build a tiled diagonal SVG watermark and apply as a full-cover overlay (export only)
+    // Watermark (FREE only, applied during export)
     function addObtrusiveWatermark(el){
       if(!WATERMARK) return null;
       const text = 'ZCSInvoicer — Upgrade to remove';
-      const fill = 'rgba(0,0,0,0.08)';     // transparency
-      const size = 64;                      // font-size inside the tile
-      const tileW = 600, tileH = 400;       // tile size (matches CSS)
+      const fill = 'rgba(0,0,0,0.08)';
+      const size = 64;
+      const tileW = 600, tileH = 400;
 
       const svg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='${tileW}' height='${tileH}' viewBox='0 0 ${tileW} ${tileH}'>
@@ -419,12 +438,9 @@
         </svg>`.trim();
 
       const dataUrl = "url(\"data:image/svg+xml;utf8," + encodeURIComponent(svg) + "\")";
-
       const overlay = document.createElement('div');
       overlay.className = 'wm-tiling';
       overlay.style.backgroundImage = dataUrl;
-
-      // Insert as the first child so invoice content sits above it
       el.insertBefore(overlay, el.firstChild);
       return overlay;
     }
@@ -433,48 +449,40 @@
       try{
         const ok=await ensurePdfLib();
         if(!ok){ alert('Could not load PDF exporter. Please check your connection and try again.'); return; }
-
         const d=collect(), fileName=(d.inv.number||'invoice')+'.pdf';
         const el=$("#invoicePreview");
-
-        // Add the obtrusive tiled watermark for capture only
-        const wmEl = addObtrusiveWatermark(el);
-
+        const wmEl = addObtrusiveWatermark(el);  // add WM only during capture
         await html2pdf().set({
           margin:10, filename:fileName,
           image:{type:'jpeg',quality:0.98},
           html2canvas:{scale:2, useCORS:true},
           jsPDF:{unit:'mm', format:'a4', orientation:'portrait'}
         }).from(el).save();
-
         if(wmEl) wmEl.remove();
-      }catch(err){
-        console.error(err);
-        alert('PDF export failed. See console for details.');
-      }
+      }catch(err){ console.error(err); alert('PDF export failed. See console for details.'); }
     }
 
     // ===== Events =====
-    els.btnAddItem.addEventListener('click', ()=>addItemRow());
-    els.btnClearItems.addEventListener('click', clearItems);
-    [els.bizName,els.bizAddr,els.bizEmail,els.bizPhone,els.clientName,els.clientAddr,els.clientEmail,els.clientPhone,
-     els.invNumber,els.invDate,els.dueDate,els.currency,els.taxRate,els.discountRate,els.notes,els.terms]
+    document.getElementById('btnAddItem').addEventListener('click', ()=>addItemRow());
+    document.getElementById('btnClearItems').addEventListener('click', clearItems);
+    [$('#bizName'),$('#bizAddr'),$('#bizEmail'),$('#bizPhone'),$('#clientName'),$('#clientAddr'),$('#clientEmail'),$('#clientPhone'),
+     $('#invNumber'),$('#invDate'),$('#dueDate'),$('#currency'),$('#taxRate'),$('#discountRate'),$('#notes'),$('#terms')]
      .forEach(el=> el.addEventListener('input', scheduleRender));
 
-    els.logoFile.addEventListener('change', e=>{
+    $('#logoFile').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f) return;
       const r=new FileReader(); r.onload=()=>{ state.logoDataUrl=r.result; scheduleRender(); }; r.readAsDataURL(f);
     });
 
-    els.btnExport.addEventListener('click', exportPDF);
-    els.btnSave.addEventListener('click', save);
-    els.btnLoad.addEventListener('click', load);
-    els.btnReset.addEventListener('click', resetAll);
+    $('#btnExport').addEventListener('click', exportPDF);
+    $('#btnSave').addEventListener('click', save);
+    $('#btnLoad').addEventListener('click', load);
+    $('#btnReset').addEventListener('click', resetAll);
 
-    els.itemsBody.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addItemRow(); }});
+    $('#itemsBody').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addItemRow(); }});
 
     // ===== Init =====
-    (function init(){ els.invNumber.value=nextInvoiceNumber(); els.invDate.value=today(); addItemRow(); render(); })();
+    (function init(){ $('#invNumber').value=nextInvoiceNumber(); $('#invDate').value=today(); addItemRow(); render(); })();
   </script>
 </body>
 </html>

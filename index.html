@@ -12,7 +12,7 @@
     :root{--bg:#0b0f14;--panel:#121922;--muted:#c7d1db;--text:#eaf0f6;--brand:#7dd3fc;--accent:#a78bfa;--ok:#34d399;--warn:#fbbf24;--danger:#f87171;--line:#223042}
     *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;background:linear-gradient(180deg,#0b0f14 0%,#0e141c 100%);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    a{color:#fff;text-decoration:none}
+    a{color:var(--brand);text-decoration:none}
     h1,h2,h3{margin:0 0 .4rem}
     .wrap{max-width:1200px;margin:0 auto;padding:18px}
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -33,9 +33,9 @@
     button{background:#132031;color:var(--text);border:1px solid #1f2c3d;padding:10px 12px;border-radius:12px;cursor:pointer}
     button:hover{border-color:#32465f}
     .btn-primary{background:linear-gradient(135deg,#1f3b57,#1a2d43);border-color:#23405d}
+    .btn-accent{background:#4f46e5;border:0}
     .btn-ok{background:linear-gradient(135deg,#0f3a2d,#0d2e25);border-color:#125c48}
     .btn-warn{background:linear-gradient(135deg,#3a2d0f,#2d240d)}
-    .cta{display:inline-block;background:#4f46e5;border-radius:12px;padding:10px 16px}
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{border-bottom:1px dashed #243245;padding:10px;text-align:left}
     th{color:var(--muted);font-weight:600}
@@ -45,6 +45,8 @@
     .totals{margin-top:12px;display:grid;gap:6px}
     .totals .line{display:flex;justify-content:space-between}
     .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.35);color:#b8ebff;font-size:.85rem}
+
+    /* Preview (PDF capture target) */
     .invoice{background:#fff;color:#111;border-radius:12px;padding:28px;position:relative;overflow:hidden}
     .invoice h2{margin:0 0 6px}
     .muted{color:#666}
@@ -57,10 +59,22 @@
     .iv-totals .line{display:flex;justify-content:space-between}
     .stamp{font-weight:800;font-size:1.1rem;color:#0a7a5b}
     .logo-preview{max-height:64px;object-fit:contain}
-    .wm-tiling{position:absolute; inset:0; pointer-events:none; background-repeat:repeat; background-size:600px 400px; opacity:1; z-index:0; mix-blend-mode:multiply}
+
+    /* Tiled diagonal watermark (injected only for PDF capture) */
+    .wm-tiling{
+      position:absolute; inset:0; pointer-events:none;
+      background-repeat:repeat;
+      background-size:600px 400px;
+      opacity:1;
+      z-index:0;
+      mix-blend-mode:multiply;
+    }
+
     footer{margin-top:18px;color:#9ab;opacity:.9}
     .small{font-size:.85rem}
     @media (max-width:980px){.grid{grid-template-columns:1fr}}
+
+    /* toast */
     .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#0f1621;border:1px solid #1e2a3a;color:#eaf0f6;padding:10px 12px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s}
     .toast.show{opacity:1}
   </style>
@@ -80,8 +94,7 @@
         <button id="btnSave" class="btn-primary">Save</button>
         <button id="btnLoad" class="btn-primary">Load</button>
         <button id="btnReset" class="btn-warn">Reset</button>
-        <!-- Anchor version so Stripe opens cleanly -->
-        <a id="btnUpgrade" class="cta" href="https://buy.stripe.com/test_dRm3cv0vkgFQalB87ceEo00" target="_blank" rel="noopener">🚀 Upgrade — Remove Watermark</a>
+        <button id="btnUpgrade" class="btn-accent">🚀 Upgrade — Remove Watermark</button>
       </div>
     </header>
 
@@ -204,12 +217,8 @@
     </div>
 
     <footer class="wrap" style="padding-left:0;padding-right:0">
-      <div class="small">Using the free version of ZCSInvoicer.
-        <!-- Footer anchor too -->
-        <a id="footerUpgrade" class="cta" href="https://buy.stripe.com/test_dRm3cv0vkgFQalB87ceEo00" target="_blank" rel="noopener">Upgrade</a>
-        to remove watermark.
-      </div>
-      <div class="small">© ZetaCron Solutions • <a href="./terms.html" style="color:#7dd3fc">Terms</a> • <a href="./privacy.html" style="color:#7dd3fc">Privacy</a></div>
+      <div class="small">Using the free version of ZCSInvoicer. <a id="footerUpgrade" href="#">Upgrade</a> to remove watermark.</div>
+      <div class="small">© ZetaCron Solutions • <a href="./terms.html">Terms</a> • <a href="./privacy.html">Privacy</a></div>
     </footer>
   </div>
 
@@ -219,11 +228,15 @@
     // ===== Config (FREE) =====
     let WATERMARK = true;
 
+    // ===== Stripe Payment Link (your test link is embedded) =====
+    const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_dRm3cv0vkgFQalB87ceEo00";
+
     // ===== Helpers =====
     const $ = s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
     const toast = (msg)=>{ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); };
     const currencySymbols = { USD:'$', EUR:'€', GBP:'£', JPY:'¥', AUD:'$' };
     const fmtMoney=(v,cur)=> (currencySymbols[cur]||'$') + (Number.isFinite(+v)?(+v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'0.00');
+    const readNumber = el => { const n=parseFloat(el.value); return Number.isFinite(n)? n : 0; };
     const uid = ()=>'inv-'+Math.random().toString(36).slice(2,8);
     const today = ()=> new Date().toISOString().slice(0,10);
     const esc = s => (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -242,10 +255,16 @@
            invNumber:$('#pvInvNumber'), invDate:$('#pvInvDate'), dueDate:$('#pvDueDate'),
            items:$('#pvItems'), subtotal:$('#pvSubtotal'), discount:$('#pvDiscount'), tax:$('#pvTax'), total:$('#pvTotal'), totalBig:$('#pvTotalBig'),
            notes:$('#pvNotes'), terms:$('#pvTerms') },
-      btnExport:$('#btnExport'), btnSave:$('#btnSave'), btnLoad:$('#btnLoad'), btnReset:$('#btnReset'),
-      statusBadge:$('#statusBadge')
+      btnExport:$('#btnaExport'), btnSave:$('#btnSave'), btnLoad:$('#btnLoad'), btnReset:$('#btnReset'),
+      statusBadge:$('#statusBadge'), btnUpgrade:$('#btnUpgrade'), footerUpgrade:$('#footerUpgrade')
     };
 
+    // Tie both upgrade links to Stripe
+    [els.btnUpgrade, els.footerUpgrade].forEach(el=>{
+      if(el){ el.addEventListener('click', (e)=>{ e.preventDefault(); window.location.href = "https://buy.stripe.com/test_dRm3cv0vkgFQalB87ceEo00"; }); }
+    });
+
+    // ===== Items =====
     function addItemRow(item={desc:'',qty:1,price:0}){
       const tr=document.createElement('tr');
       tr.innerHTML=`
@@ -262,6 +281,7 @@
     }
     function clearItems(){ els.itemsBody.innerHTML=''; scheduleRender(); }
 
+    // ===== Collect & Render =====
     let renderTimer=null;
     function scheduleRender(){ els.statusBadge.textContent='Unsaved'; clearTimeout(renderTimer); renderTimer=setTimeout(render,60); }
     function collect(){
@@ -294,7 +314,6 @@
       els.pv.bizName.textContent=d.biz.name||'Your Company';
       els.pv.bizAddr.textContent=d.biz.addr||'—';
       els.pv.bizEmail.textContent=d.biz.email||'—';
-      els.pv.pvLogo.src = state.logoDataUrl||'';
       els.pv.bizPhone.textContent=d.biz.phone||'—';
       els.pv.invNumber.textContent=d.inv.number||'#0001';
       els.pv.invDate.textContent=d.inv.date||'—';
@@ -325,9 +344,13 @@
         const amt=(parseFloat(q.value)||0)*(parseFloat(p.value)||0);
         tr.querySelector('.amount').textContent=fmtMoney(amt,cur);
       });
+
+      // Logo preview
+      if(state.logoDataUrl){ els.pv.pvLogo.src=state.logoDataUrl; els.pv.pvLogo.style.display='inline-block'; }
+      else{ els.pv.pvLogo.removeAttribute('src'); els.pv.pvLogo.style.display='none'; }
     }
 
-    // Storage
+    // ===== Storage =====
     const STORAGE_KEY='zcsinvoicer.v1', STORAGE_LIST='zcsinvoicer.list.v1';
     function save(){
       try{
@@ -375,7 +398,7 @@
       const rand=Math.floor(Math.random()*90+10); return `INV-${y}${m}${d}-${rand}`;
     }
 
-    // PDF export
+    // ===== PDF (on-demand loader) =====
     async function ensurePdfLib(){
       if(window.html2pdf) return true;
       const urls=[
@@ -395,43 +418,71 @@
       }
       return false;
     }
+
+    // Watermark (FREE only, applied during export)
     function addObtrusiveWatermark(el){
-      const text='ZCSInvoicer — Upgrade to remove', fill='rgba(0,0,0,0.08)', size=64, tileW=600, tileH=400;
       if(!WATERMARK) return null;
-      const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='${tileW}' height='${tileH}' viewBox='0 0 ${tileW} ${tileH}'><g transform='rotate(-30 ${tileW/2} ${tileH/2})'><text x='30' y='${tileH/2}' fill='${fill}' font-size='${size}' font-weight='700' font-family="system-ui, Arial, Helvetica, sans-serif" letter-spacing='2'>${text}</text></g></svg>`;
-      const overlay=document.createElement('div');
-      overlay.className='wm-tiling';
-      overlay.style.backgroundImage=`url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+      const text = 'ZCSInvoicer — Upgrade to remove';
+      const fill = 'rgba(0,0,0,0.08)';
+      const size = 64;
+      const tileW = 600, tileH = 400;
+
+      const svg = `
+        <svg xmlns='http://www.w3.org/2000/svg' width='${tileW}' height='${tileH}' viewBox='0 0 ${tileW} ${tileH}'>
+          <g transform='rotate(-30 ${tileW/2} ${tileH/2})'>
+            <text x='30' y='${tileH/2}' fill='${fill}' font-size='${size}' font-weight='700'
+                  font-family="system-ui, Arial, Helvetica, sans-serif" letter-spacing='2'>
+              ${text}
+            </text>
+          </g>
+        </svg>`.trim();
+
+      const dataUrl = "url(\"data:image/svg+xml;utf8," + encodeURIComponent(svg) + "\")";
+      const overlay = document.createElement('div');
+      overlay.className = 'wm-tiling';
+      overlay.style.backgroundImage = dataUrl;
       el.insertBefore(overlay, el.firstChild);
       return overlay;
     }
+
     async function exportPDF(){
       try{
-        const ok=await ensurePdfLib(); if(!ok){ alert('Could not load PDF exporter.'); return; }
+        const ok=await ensurePdfLib();
+        if(!ok){ alert('Could not load PDF exporter. Please check your connection and try again.'); return; }
         const d=collect(), fileName=(d.inv.number||'invoice')+'.pdf';
-        const el=document.querySelector("#invoicePreview");
-        const wmEl=addObtrusiveWatermark(el);
-        await html2pdf().set({margin:10, filename:fileName, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2, useCORS:true}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'}}).from(el).save();
+        const el=$("#invoicePreview");
+        const wmEl = addObtrusiveWatermark(el);  // add WM only during capture
+        await html2pdf().set({
+          margin:10, filename:fileName,
+          image:{type:'jpeg',quality:0.98},
+          html2canvas:{scale:2, useCORS:true},
+          jsPDF:{unit:'mm', format:'a4', orientation:'portrait'}
+        }).from(el).save();
         if(wmEl) wmEl.remove();
-      }catch(err){ console.error(err); alert('PDF export failed.'); }
+      }catch(err){ console.error(err); alert('PDF export failed. See console for details.'); }
     }
 
-    // Events
+    // ===== Events =====
     document.getElementById('btnAddItem').addEventListener('click', ()=>addItemRow());
     document.getElementById('btnClearItems').addEventListener('click', clearItems);
-    ['#bizName','#bizAddr','#bizEmail','#bizPhone','#clientName','#clientAddr','#clientEmail','#clientPhone','#invNumber','#invDate','#dueDate','#currency','#taxRate','#discountRate','#notes','#terms']
-      .map(s=>document.querySelector(s)).forEach(el=> el.addEventListener('input', scheduleRender));
-    document.getElementById('logoFile').addEventListener('change', e=>{
+    [$('#bizName'),$('#bizAddr'),$('#bizEmail'),$('#bizPhone'),$('#clientName'),$('#clientAddr'),$('#clientEmail'),$('#clientPhone'),
+     $('#invNumber'),$('#invDate'),$('#dueDate'),$('#currency'),$('#taxRate'),$('#discountRate'),$('#notes'),$('#terms')]
+     .forEach(el=> el.addEventListener('input', scheduleRender));
+
+    $('#logoFile').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f) return;
       const r=new FileReader(); r.onload=()=>{ state.logoDataUrl=r.result; scheduleRender(); }; r.readAsDataURL(f);
     });
-    document.getElementById('btnExport').addEventListener('click', exportPDF);
-    document.getElementById('btnSave').addEventListener('click', save);
-    document.getElementById('btnLoad').addEventListener('click', load);
-    document.getElementById('btnReset').addEventListener('click', resetAll);
-    document.getElementById('itemsBody').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addItemRow(); }});
 
-    (function init(){ document.getElementById('invNumber').value=nextInvoiceNumber(); document.getElementById('invDate').value=today(); addItemRow(); render(); })();
+    $('#btnExport').addEventListener('click', exportPDF);
+    $('#btnSave').addEventListener('click', save);
+    $('#btnLoad').addEventListener('click', load);
+    $('#btnReset').addEventListener('click', resetAll);
+
+    $('#itemsBody').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addItemRow(); }});
+
+    // ===== Init =====
+    (function init(){ $('#invNumber').value=nextInvoiceNumber(); $('#invDate').value=today(); addItemRow(); render(); })();
   </script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ZCS-Invoicer — Private, Client-Side Invoicing Made Simpler</title>
   <meta name="description" content="Create professional invoices and export to PDF. Free version adds a watermark." />
   <meta property="og:title" content="ZCS-Invoicer — Free Invoice Generator" />
@@ -10,42 +10,108 @@
   <meta property="og:type" content="website" />
   <link rel="canonical" href="https://www.zetacronsolutions.com/">
   <style>
-    :root{--bg:#0b0f14;--panel:#121922;--muted:#c7d1db;--text:#eaf0f6;--brand:#7dd3fc;--accent:#a78bfa;--ok:#34d399;--warn:#fbbf24;--danger:#f87171;--line:#223042}
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:linear-gradient(180deg,#0b0f14 0%,#0e141c 100%);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    :root{
+      --bg:#0b0f14; --panel:#121922; --muted:#c7d1db; --text:#eaf0f6; --brand:#7dd3fc; --accent:#a78bfa;
+      --ok:#34d399; --warn:#fbbf24; --danger:#f87171; --line:#223042; --ghost:#0f1621;
+      --ring: rgba(125,211,252,.18);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:linear-gradient(180deg,#0b0f14 0%,#0e141c 100%); color:var(--text);
+      font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    }
     a{color:var(--brand);text-decoration:none}
-    h1,h2,h3{margin:0 0 .4rem}
+
+    /* ====== Top Navigation ====== */
+    .site-nav{
+      position:sticky; top:0; z-index:50;
+      background:rgba(10,14,20,.7); backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--line);
+    }
+    .site-nav .bar{
+      max-width:1200px; margin:0 auto; padding:12px 18px;
+      display:flex; align-items:center; gap:18px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px; margin-right:auto;
+      color:var(--text); font-weight:800; letter-spacing:.2px;
+    }
+    .brand-badge{
+      width:28px; height:28px; border-radius:8px;
+      background:linear-gradient(135deg,var(--brand),var(--accent));
+      display:grid; place-items:center; color:#001018; font-weight:900; box-shadow:0 6px 24px rgba(125,211,252,.25);
+      transition: transform .2s ease, filter .2s ease;
+    }
+    .brand:hover .brand-badge{ transform: translateY(-1px); filter:brightness(1.05); }
+    .navlink{
+      color:var(--muted); padding:8px 10px; border-radius:10px; transition: color .15s ease, background .15s ease, transform .15s ease;
+    }
+    .navlink:hover{ color:var(--text); background:rgba(125,211,252,.08); transform: translateY(-1px); }
+    .navlink.active{ color:var(--text); background:rgba(125,211,252,.12); }
+
+    /* ====== Page Layout ====== */
     .wrap{max-width:1200px;margin:0 auto;padding:18px}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:14px 0}
     .logo{display:flex;align-items:center;gap:10px}
-    .logo-badge{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--accent));display:grid;place-items:center;box-shadow:0 6px 24px rgba(125,211,252,.25)}
+    .logo-badge{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--accent));display:grid;place-items:center;box-shadow:0 6px 24px rgba(125,211,252,.25);transition:transform .2s ease, filter .2s ease}
+    .logo-badge:hover{ transform: translateY(-1px); filter:brightness(1.05); }
     .logo-badge span{font-weight:800;color:#001018}
     .tag{color:var(--muted);opacity:.9}
+
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .card{background:rgba(18,25,34,.75);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+    .card{
+      background:rgba(18,25,34,.75);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:16px;
+      box-shadow:0 10px 40px rgba(0,0,0,.35); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .card:hover{ transform: translateY(-2px); box-shadow:0 14px 46px rgba(0,0,0,.45); border-color:#2b3c52; }
     .card>.hd{display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--line)}
     .card>.bd{padding:14px}
+
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     label{display:block;margin:8px 0 6px;color:var(--muted);font-size:.9rem}
-    input,select,textarea{width:100%;background:#0f1621;border:1px solid #1e2a3a;color:var(--text);padding:10px;border-radius:10px;outline:none}
-    input:focus,select:focus,textarea:focus{border-color:#34557a;box-shadow:0 0 0 3px rgba(125,211,252,.15)}
+
+    input,select,textarea{
+      width:100%; background:var(--ghost); border:1px solid #1e2a3a; color:var(--text);
+      padding:10px; border-radius:10px; outline:none; transition: border-color .15s ease, box-shadow .15s ease, transform .05s ease;
+    }
+    input:focus,select:focus,textarea:focus{ border-color:#34557a; box-shadow:0 0 0 3px var(--ring); }
+    input:hover,select:hover,textarea:hover{ border-color:#2a3c52; }
+
     textarea{min-height:64px;resize:vertical}
+
     .btns{display:flex;flex-wrap:wrap;gap:10px}
-    button{background:#132031;color:var(--text);border:1px solid #1f2c3d;padding:10px 12px;border-radius:12px;cursor:pointer}
-    button:hover{border-color:#32465f}
+    button{
+      background:#132031;color:var(--text);border:1px solid #1f2c3d;padding:10px 12px;border-radius:12px;cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .15s ease, background .15s ease, filter .15s ease;
+    }
+    button:hover{ border-color:#32465f; transform: translateY(-1px); }
+    button:active{ transform: translateY(0); }
+    button:focus-visible{ outline: none; box-shadow: 0 0 0 3px var(--ring); }
+
     .btn-primary{background:linear-gradient(135deg,#1f3b57,#1a2d43);border-color:#23405d}
+    .btn-primary:hover{ filter:brightness(1.05) }
     .btn-accent{background:#4f46e5;border:0}
+    .btn-accent:hover{ filter:brightness(1.07) }
     .btn-ok{background:linear-gradient(135deg,#0f3a2d,#0d2e25);border-color:#125c48}
+    .btn-ok:hover{ filter:brightness(1.05) }
     .btn-warn{background:linear-gradient(135deg,#3a2d0f,#2d240d)}
+    .btn-warn:hover{ filter:brightness(1.05) }
+
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{border-bottom:1px dashed #243245;padding:10px;text-align:left}
     th{color:var(--muted);font-weight:600}
     td input{width:100%;background:transparent;border:none;color:#fff}
     td input:focus{outline:none}
+    tbody tr{transition: background .12s ease}
+    tbody tr:hover{ background:rgba(125,211,252,.05) }
+
     .right{text-align:right}
     .totals{margin-top:12px;display:grid;gap:6px}
     .totals .line{display:flex;justify-content:space-between}
+
     .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.35);color:#b8ebff;font-size:.85rem}
+
     .invoice{background:#fff;color:#111;border-radius:12px;padding:28px;position:relative;overflow:hidden}
     .invoice h2{margin:0 0 6px}
     .muted{color:#666}
@@ -59,14 +125,41 @@
     .stamp{font-weight:800;font-size:1.1rem;color:#0a7a5b}
     .logo-preview{max-height:64px;object-fit:contain}
     .wm-tiling{position:absolute; inset:0; pointer-events:none; background-repeat:repeat; background-size:600px 400px; opacity:1; z-index:0; mix-blend-mode:multiply}
+
     footer{margin-top:18px;color:#9ab;opacity:.9}
     .small{font-size:.85rem}
-    @media (max-width:980px){.grid{grid-template-columns:1fr}}
-    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#0f1621;border:1px solid #1e2a3a;color:#eaf0f6;padding:10px 12px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s}
-    .toast.show{opacity:1}
+
+    .toast{
+      position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+      background:#0f1621;border:1px solid #1e2a3a;color:#eaf0f6;padding:10px 12px;border-radius:10px;
+      opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;
+    }
+    .toast.show{opacity:1; transform: translateX(-50%) translateY(-2px); }
+
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr}
+      .site-nav .bar{gap:10px}
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      *{transition:none !important}
+    }
   </style>
 </head>
 <body>
+  <!-- Top Navigation (safe links only; no Stripe here) -->
+  <div class="site-nav" role="navigation" aria-label="Primary">
+    <div class="bar">
+      <a class="brand" href="/">
+        <span class="brand-badge">Z</span>
+        Zetacron Solutions
+      </a>
+      <a class="navlink active" href="/">Invoicer</a>
+      <a class="navlink" href="https://simulator.zetacronsolutions.com" target="_self" rel="noopener">Monte Carlo Simulator</a>
+    </div>
+  </div>
+
   <div class="wrap">
     <header>
       <div class="logo">
@@ -214,7 +307,6 @@
     let WATERMARK = true;
 
     // ===== Stripe Payment Link (LIVE) =====
-    // (replaces previous test-mode link)
     const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/14AaEXfjL06YeOuaA4gYU00";
 
     // ===== Helpers =====
@@ -263,7 +355,7 @@
         <td class="right"><input aria-label="Quantity" type="number" min="0" step="1" value="${item.qty??1}"></td>
         <td class="right"><input aria-label="Unit price" type="number" min="0" step="0.01" value="${item.price??0}"></td>
         <td class="right"><span class="amount">$0.00</span>
-          <button title="Remove" class="rm" style="margin-left:6px;color:#f87171;background:transparent;border:none;cursor:pointer">✕</button>
+          <button title="Remove" class="rm" style="margin-left:6px;color:var(--danger);background:transparent;border:none;cursor:pointer">✕</button>
         </td>`;
       els.itemsBody.appendChild(tr);
       tr.querySelectorAll('input').forEach(i=> i.addEventListener('input', scheduleRender));
@@ -437,7 +529,7 @@
         const ok=await ensurePdfLib();
         if(!ok){ alert('Could not load PDF exporter. Please check your connection and try again.'); return; }
         const d=collect(), fileName=(d.inv.number||'invoice')+'.pdf';
-        const el=$("#invoicePreview");
+        const el=document.getElementById("invoicePreview");
         const wmEl = addObtrusiveWatermark(el);
         await html2pdf().set({
           margin:10, filename:fileName,
@@ -450,26 +542,34 @@
     }
 
     // ===== Events =====
-    $('#btnAddItem').addEventListener('click', ()=>addItemRow());
-    $('#btnClearItems').addEventListener('click', clearItems);
-    [$('#bizName'),$('#bizAddr'),$('#bizEmail'),$('#bizPhone'),$('#clientName'),$('#clientAddr'),$('#clientEmail'),$('#clientPhone'),
-     $('#invNumber'),$('#invDate'),$('#dueDate'),$('#currency'),$('#taxRate'),$('#discountRate'),$('#notes'),$('#terms')]
-     .forEach(el=> el.addEventListener('input', scheduleRender));
+    document.getElementById('btnAddItem').addEventListener('click', ()=>addItemRow());
+    document.getElementById('btnClearItems').addEventListener('click', clearItems);
 
-    $('#logoFile').addEventListener('change', e=>{
+    [
+      '#bizName','#bizAddr','#bizEmail','#bizPhone','#clientName','#clientAddr','#clientEmail','#clientPhone',
+      '#invNumber','#invDate','#dueDate','#currency','#taxRate','#discountRate','#notes','#terms'
+    ].forEach(sel=> document.querySelector(sel).addEventListener('input', scheduleRender));
+
+    document.getElementById('logoFile').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f) return;
       const r=new FileReader(); r.onload=()=>{ state.logoDataUrl=r.result; scheduleRender(); }; r.readAsDataURL(f);
     });
 
-    // fixed id: was 'btnaExport' before; correct is 'btnExport'
-    $('#btnExport').addEventListener('click', exportPDF);
-    $('#btnSave').addEventListener('click', save);
-    $('#btnLoad').addEventListener('click', load);
-    $('#btnReset').addEventListener('click', resetAll);
+    document.getElementById('btnExport').addEventListener('click', exportPDF);
+    document.getElementById('btnSave').addEventListener('click', save);
+    document.getElementById('btnLoad').addEventListener('click', load);
+    document.getElementById('btnReset').addEventListener('click', resetAll);
 
-    $('#itemsBody').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addItemRow(); }});
+    document.getElementById('itemsBody').addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); addItemRow(); }
+    });
 
-    (function init(){ $('#invNumber').value=nextInvoiceNumber(); $('#invDate').value=today(); addItemRow(); render(); })();
+    (function init(){
+      document.getElementById('invNumber').value=nextInvoiceNumber();
+      document.getElementById('invDate').value=today();
+      addItemRow();
+      render();
+    })();
   </script>
 </body>
 </html>
